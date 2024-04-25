@@ -16,6 +16,7 @@ package com.googlesource.gerrit.plugins.deleteproject.fs;
 
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.MoreFiles;
 import com.google.gerrit.extensions.api.changes.NotifyHandling;
@@ -23,7 +24,9 @@ import com.google.gerrit.extensions.events.ProjectDeletedListener;
 import com.google.gerrit.extensions.registration.DynamicSet;
 import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.server.git.GitRepositoryManager;
+import com.google.gerrit.server.replication.coordinators.ReplicatedEventsCoordinator;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.googlesource.gerrit.plugins.deleteproject.Configuration;
 import com.googlesource.gerrit.plugins.deleteproject.TimeMachine;
 import java.io.File;
@@ -48,6 +51,7 @@ public class FilesystemDeleteHandler {
   private final DynamicSet<ProjectDeletedListener> deletedListeners;
   private final Configuration config;
 
+
   @Inject
   public FilesystemDeleteHandler(
       GitRepositoryManager repoManager,
@@ -56,6 +60,24 @@ public class FilesystemDeleteHandler {
     this.repoManager = repoManager;
     this.deletedListeners = deletedListeners;
     this.config = config;
+  }
+
+  @VisibleForTesting
+  protected FilesystemDeleteHandler(
+      GitRepositoryManager repoManager,
+      DynamicSet<ProjectDeletedListener> deletedListeners,
+      Configuration config,
+      ReplicatedEventsCoordinator replicatedEventsCoordinator) {
+    this.repoManager = repoManager;
+    this.deletedListeners = deletedListeners;
+    this.config = config;
+  }
+
+  public void deleteFromCache(Project project) throws RepositoryNotFoundException, IOException{
+    // Remove from the jgit cache
+    Repository repository =
+            repoManager.openRepository(project.getNameKey());
+    cleanCache(repository);
   }
 
   public void delete(Project project, boolean preserveGitRepository)
