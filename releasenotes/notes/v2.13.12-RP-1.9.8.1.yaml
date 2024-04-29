@@ -1,0 +1,6 @@
+---
+fixes:
+- "Event Replication Scalability and Performance"
+- "New Incoming Event Thread Pooling"
+- "New Outgoing Event Thread Batching"
+- "Event Processing Enhancements"
