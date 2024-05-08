@@ -1,0 +1,5 @@
+---
+fixes:
+- "Support replication disabled configuration;"
+- "UI fixes;"
+- "Better handling of configuration exceptions; "

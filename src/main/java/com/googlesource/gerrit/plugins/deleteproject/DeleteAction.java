@@ -22,6 +22,9 @@ import com.google.inject.Provider;
 import com.googlesource.gerrit.plugins.deleteproject.cache.CacheDeleteHandler;
 import com.googlesource.gerrit.plugins.deleteproject.database.DatabaseDeleteHandler;
 import com.googlesource.gerrit.plugins.deleteproject.fs.FilesystemDeleteHandler;
+import com.wandisco.gerrit.gitms.shared.exception.ConfigurationException;
+
+import java.io.IOException;
 
 public class DeleteAction extends DeleteProject implements UiAction<ProjectResource> {
   private final ProtectedProjects protectedProjects;
@@ -36,7 +39,7 @@ public class DeleteAction extends DeleteProject implements UiAction<ProjectResou
       DeleteLog deleteLog,
       DeletePreconditions preConditions,
       Configuration cfg,
-      HideProject hideProject) {
+      HideProject hideProject) throws IOException, ConfigurationException {
     super(
         dbHandler,
         fsHandler,
@@ -51,12 +54,17 @@ public class DeleteAction extends DeleteProject implements UiAction<ProjectResou
 
   @Override
   public UiAction.Description getDescription(ProjectResource rsrc) {
+    boolean replicated=false;
+    try {
+      replicated = DeleteProject.isRepoReplicated(rsrc.getName());
+    } catch (IOException e) {
+    //use flogger here?
+    }
+
     return new UiAction.Description()
-        .setLabel("Delete Project")
-        .setTitle(
-            protectedProjects.isProtected(rsrc)
-                ? String.format("Not allowed to delete %s", rsrc.getName())
-                : String.format("Delete project %s", rsrc.getName()))
+        .setLabel(replicated ? "Delete replicated project..." : "Delete project...")
+        .setTitle(protectedProjects.isProtected(rsrc) ? String.format("Not allowed to delete %s", rsrc.getName()) :
+                String.format("%s project %s", (replicated? "  Delete replicated":"Delete"), rsrc.getName()))
         .setEnabled(!protectedProjects.isProtected(rsrc))
         .setVisible(preConditions.canDelete(rsrc));
   }

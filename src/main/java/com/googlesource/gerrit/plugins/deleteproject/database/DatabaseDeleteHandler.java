@@ -38,6 +38,8 @@ import com.google.gerrit.server.notedb.ChangeNotes.Factory.ChangeNotesResult;
 import com.google.gerrit.server.notedb.NotesMigration;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.account.InternalAccountQuery;
+import com.google.gerrit.server.query.change.ChangeData;
+import com.google.gerrit.server.query.change.InternalChangeQuery;
 import com.google.gwtorm.jdbc.JdbcSchema;
 import com.google.gwtorm.server.OrmException;
 import com.google.gwtorm.server.ResultSet;
@@ -54,7 +56,6 @@ import org.eclipse.jgit.errors.ConfigInvalidException;
 
 public class DatabaseDeleteHandler {
   private static final FluentLogger log = FluentLogger.forEnclosingClass();
-
   private final Provider<ReviewDb> dbProvider;
   private final StarredChangesUtil starredChangesUtil;
   private final DynamicItem<AccountPatchReviewStore> accountPatchReviewStore;
@@ -118,7 +119,7 @@ public class DatabaseDeleteHandler {
 
   private List<Change.Id> getChangesList(Project project, Connection conn) throws SQLException {
     try (PreparedStatement changesForProject =
-        conn.prepareStatement("SELECT change_id FROM changes WHERE dest_project_name = ?")) {
+             conn.prepareStatement("SELECT change_id FROM changes WHERE dest_project_name = ?")) {
       changesForProject.setString(1, project.getName());
       try (java.sql.ResultSet resultSet = changesForProject.executeQuery()) {
         List<Change.Id> changeIds = new ArrayList<>();
@@ -147,7 +148,6 @@ public class DatabaseDeleteHandler {
 
   private void deleteChanges(ReviewDb db, Project.NameKey project, List<Change.Id> changeIds)
       throws OrmException {
-
     for (Change.Id id : changeIds) {
       try {
         starredChangesUtil.unstarAll(project, id);
@@ -176,12 +176,14 @@ public class DatabaseDeleteHandler {
     }
   }
 
+
   private void deleteFromPatchSets(ReviewDb db, ResultSet<PatchSet> patchSets) throws OrmException {
     for (PatchSet patchSet : patchSets) {
       accountPatchReviewStore.get().clearReviewed(patchSet.getId());
       db.patchSets().delete(Collections.singleton(patchSet));
     }
   }
+
 
   public void atomicDelete(ReviewDb db, Project project, List<Change.Id> changeIds)
       throws OrmException {
@@ -207,5 +209,43 @@ public class DatabaseDeleteHandler {
         }
       }
     }
+  }
+
+  /**
+   * Populating the list of changes here to return to the calling method
+   * in DeleteProject as the changes list needs to be passed to the replicated call.
+   * Both ReviewDB and NoteDb changes list supported.
+   * @param project
+   * @return
+   * @throws OrmException
+   * @throws IOException
+   */
+  public List<Change.Id> getReplicatedDeleteChangeIdsList(Project project) throws OrmException, IOException {
+    ReviewDb db = ReviewDbUtil.unwrapDb(dbProvider.get());
+    List<Change.Id> changes;
+    if (isReviewDb()) {
+      Connection conn = ((JdbcSchema) db).getConnection();
+      try {
+        conn.setAutoCommit(false);
+        try {
+          changes = getChangesList(project, conn);
+          atomicDelete(db, project, getChangesList(project, conn));
+          conn.commit();
+        } finally {
+          conn.setAutoCommit(true);
+        }
+      } catch (SQLException e) {
+        try {
+          conn.rollback();
+        } catch (SQLException ex) {
+          throw new OrmException(ex);
+        }
+        throw new OrmException(e);
+      }
+    } else {
+      changes = getChangesListFromNoteDb(project);
+      atomicDelete(db, project, getChangesListFromNoteDb(project));
+    }
+    return changes;
   }
 }
