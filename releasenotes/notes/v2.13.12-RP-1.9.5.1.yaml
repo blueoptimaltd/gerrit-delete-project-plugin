@@ -1,0 +1,3 @@
+---
+fixes:
+- "Critical Security fix: https://bugs.chromium.org/p/gerrit/issues/detail?id=10262"
