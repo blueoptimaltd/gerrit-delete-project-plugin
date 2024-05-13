@@ -1,0 +1,3 @@
+---
+fixes:
+- "Support for repositories without a .git suffix "
