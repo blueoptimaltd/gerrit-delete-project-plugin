@@ -1,6 +1,9 @@
 Configuration
 =============
 
+NOTE: If a repository is a Git MultiSite replicated repository then some
+of the configuration options will be ignored.
+
 The configuration of the @PLUGIN@ plugin is done in the `gerrit.config`
 file.
 
@@ -33,6 +36,23 @@ plugin.@PLUGIN@.hideProjectOnPreserve
 
 	By default false.
 
+
+plugin.@PLUGIN@.enablePreserveOption
+
+Warning: **This option is not configurable in the WANdisco fork of the delete-project plugin. 
+Please refer to about.md for more information**.
+
+:	Whether the "Preserve git repository" option is enabled for the user on the
+    UI and ssh delete-project command.
+
+	Disabling the preserve option means the user does not have access to the
+	preserve option on the UI and ssh delete-project command.
+
+	If this is set to false, then preserving deleted git repositories is
+	disabled.
+
+	By default true.
+
 plugin.@PLUGIN@.parentForDeletedProjects
 :	The name of the project that is used as parent for all deleted
 	projects that were preserved by hiding them.
@@ -54,6 +74,9 @@ plugin.@PLUGIN@.protectedProject
 
 plugin.@PLUGIN@.archiveDeletedRepos
 :	Whether to archive repositories instead of deleting them.
+
+Warning: **This configuration option will be ignored for Git MultiSite replicated 
+repositories. Repositories being deleted by GitMultiSite are always archived.**.
 
 	Archiving the git repository means that the repository is stored
 	in a folder which is not visible to the users which, from the user

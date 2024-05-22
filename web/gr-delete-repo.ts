@@ -95,7 +95,8 @@ export class GrDeleteRepo extends LitElement {
   override render() {
     if (!this.action) return;
     return html`
-      <h3>${this.action.label}</h3>
+      <p/>
+      <h3 class="heading-3">${this.action.label}</h3>
       <gr-button
         title="${this.action.title}"
         ?disabled="${!this.action.enabled}"
