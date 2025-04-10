@@ -90,7 +90,11 @@ public class DatabaseDeleteHandler {
         // we can ignore the exception during delete
       }
       // Delete from the secondary index
-      indexer.delete(id);
+      try {
+        indexer.deleteNoRepl(id);
+      } catch (IOException e) {
+        log.atSevere().withCause(e).log("Failed to delete change %s from index", id);
+      }
     }
   }
 
@@ -117,5 +121,17 @@ public class DatabaseDeleteHandler {
         }
       }
     }
+  }
+
+  /**
+   * Populating the list of changes here to return to the calling method
+   * in DeleteProject as the changes list needs to be passed to the replicated call.
+   */
+  public List<Change.Id> getReplicatedDeleteChangeIdsList(Project project) throws IOException {
+
+    List<Change.Id> changes = getChangesListFromNoteDb(project);
+    atomicDelete(project, changes);
+
+    return changes;
   }
 }

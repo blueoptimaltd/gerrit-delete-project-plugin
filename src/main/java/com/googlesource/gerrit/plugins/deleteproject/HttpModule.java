@@ -17,11 +17,26 @@ package com.googlesource.gerrit.plugins.deleteproject;
 import com.google.gerrit.extensions.registration.DynamicSet;
 import com.google.gerrit.extensions.webui.JavaScriptPlugin;
 import com.google.gerrit.extensions.webui.WebUiPlugin;
+import com.google.inject.Inject;
 import com.google.inject.servlet.ServletModule;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 public class HttpModule extends ServletModule {
+  private static final Logger log = LogManager.getLogger(HttpModule.class.getName());
+  private final Configuration cfg;
+
+  @Inject
+  HttpModule(Configuration cfg) {
+    this.cfg = cfg;
+  }
+
   @Override
   protected void configureServlets() {
+    if (!cfg.enablePreserveOption()) {
+      log.warn("`enablePreserveOption=false` has been set in gerrit.config. This configuration will be ignored.");
+    }
+
     DynamicSet.bind(binder(), WebUiPlugin.class)
         .toInstance(new JavaScriptPlugin("gr-delete-repo.js"));
   }
