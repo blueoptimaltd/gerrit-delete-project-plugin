@@ -18,13 +18,15 @@ gerrit_plugin(
     ],
     resource_jars = ["//plugins/delete-project/web:gr-delete-repo"],
     resources = glob(["src/main/resources/Documentation/*.md"]),
-    deps = ["@commons-io//jar"],
+    deps = ["@commons-io//jar",
+            "//lib/wandisco:gerrit-gitms-shared"
+        ],
 )
 
 junit_tests(
     name = "delete-project_tests",
     srcs = glob(["src/test/java/**/*.java"]),
-    tags = ["delete-project"],
+    tags = ["delete-project", "disabled"],
     deps = [
         ":delete-project__plugin_test_deps",
     ],

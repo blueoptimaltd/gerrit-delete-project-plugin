@@ -14,9 +14,11 @@
 
 package com.googlesource.gerrit.plugins.deleteproject.fs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.gerrit.entities.Project;
 import com.google.gerrit.extensions.events.ProjectDeletedListener;
 import com.google.gerrit.extensions.registration.DynamicSet;
+import com.google.gerrit.server.replication.coordinators.ReplicatedEventsCoordinator;
 import com.google.inject.Inject;
 import com.googlesource.gerrit.plugins.deleteproject.Configuration;
 import java.io.IOException;
@@ -28,6 +30,7 @@ public class FilesystemDeleteHandler {
   private final DynamicSet<ProjectDeletedListener> deletedListeners;
   private final Configuration config;
 
+
   @Inject
   public FilesystemDeleteHandler(
       RepositoryDelete repositoryDelete,
@@ -36,6 +39,26 @@ public class FilesystemDeleteHandler {
     this.repositoryDelete = repositoryDelete;
     this.deletedListeners = deletedListeners;
     this.config = config;
+  }
+
+  /**
+   * Constructor for testing use that allows a dummy replicatedEventsCoordinator to be explicitly
+   * passed rather than relying on injection.
+   */
+  @VisibleForTesting
+  protected FilesystemDeleteHandler(
+      RepositoryDelete repositoryDelete,
+      DynamicSet<ProjectDeletedListener> deletedListeners,
+      Configuration config,
+      ReplicatedEventsCoordinator replicatedEventsCoordinator) {
+    this.repositoryDelete = repositoryDelete;
+    this.deletedListeners = deletedListeners;
+    this.config = config;
+  }
+
+  public void deleteFromCache(Project.NameKey project) throws RepositoryNotFoundException, IOException {
+    // Remove from the jgit cache
+    repositoryDelete.cleanFromCache(project);
   }
 
   public void delete(Project.NameKey project, boolean preserveGitRepository)
